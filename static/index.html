@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pixel Art Launcher</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="app">
+        <nav class="pixel-nav">
+            <button id="nav-dashboard" class="active">Dashboard</button>
+            <button id="nav-scan">Scan</button>
+            <button id="nav-settings">Settings</button>
+        </nav>
+
+        <!-- ── Dashboard ───────────────────────────────────── -->
+        <div id="view-dashboard" class="view active">
+            <div class="dashboard-toolbar">
+                <div id="group-filter" class="group-filter"></div>
+                <div class="view-mode-btns">
+                    <button id="mode-grid"    class="mode-btn" title="Grid"><span class="nf">&#xF009;</span></button>
+                    <button id="mode-grouped" class="mode-btn"         title="Grouped"><span class="nf">&#xF0DB;</span></button>
+                    <button id="mode-list"    class="mode-btn"         title="List"><span class="nf">&#xF0CA;</span></button>
+                </div>
+            </div>
+            <div id="bookmarks-grid" class="pixel-grid"></div>
+        </div>
+
+        <!-- ── Scan ────────────────────────────────────────── -->
+        <div id="view-scan" class="view">
+            <h1>Scan Local Ports</h1>
+            <div class="scan-controls">
+                <div class="scan-presets">
+                    <button class="preset-btn" data-end="1000">Common (1–1000)</button>
+                    <button class="preset-btn" data-end="49151">All Ports</button>
+                    <button class="preset-btn" data-custom="true">Custom</button>
+                </div>
+                <div id="custom-range-inputs" class="custom-range hidden">
+                    <input type="number" id="scan-start" placeholder="Start" min="1" max="65535" value="1">
+                    <span>–</span>
+                    <input type="number" id="scan-end" placeholder="End" min="1" max="65535" value="9999">
+                    <button id="btn-scan-custom">Scan</button>
+                </div>
+                <div class="scan-actions">
+                    <button id="btn-scan-default">Scan Ports 1–1000</button>
+                    <button id="btn-stop-scan" class="hidden">Stop</button>
+                </div>
+            </div>
+            <div id="scan-progress-area" class="hidden">
+                <div class="progress-label">
+                    <span id="progress-text">Scanning…</span>
+                    <span id="progress-count"></span>
+                </div>
+                <div class="progress-bar-outer">
+                    <div id="progress-bar-inner" class="progress-bar-inner"></div>
+                </div>
+            </div>
+            <div id="scan-results" class="pixel-grid"></div>
+        </div>
+
+        <!-- ── Settings ────────────────────────────────────── -->
+        <div id="view-settings" class="view">
+            <h1>Settings</h1>
+
+            <section class="settings-section">
+                <h2>Groups</h2>
+                <div id="groups-list" class="groups-list"></div>
+                <form id="form-add-group" class="settings-form inline-form">
+                    <input type="text" id="group-name" placeholder="Group name" required>
+                    <input type="color" id="group-color" value="#27ae60">
+                    <button type="submit">Add Group</button>
+                </form>
+            </section>
+
+            <section class="settings-section">
+                <h2>Add Bookmark</h2>
+                <form id="form-add-bookmark" class="settings-form">
+                    <input type="text" id="bm-name" placeholder="Name" required>
+                    <div class="type-toggle">
+                        <label><input type="radio" name="bm-type" value="port" checked> Port</label>
+                        <label><input type="radio" name="bm-type" value="url"> URL</label>
+                    </div>
+                    <input type="number" id="bm-port" placeholder="Port number" min="1" max="65535">
+                    <input type="text" id="bm-url" placeholder="https://example.com" class="hidden">
+                    <div class="icon-picker-wrap">
+                        <label>Icon</label>
+                        <input type="text" id="bm-icon-search" placeholder="Search icon…" autocomplete="off">
+                        <input type="hidden" id="bm-icon">
+                        <div id="bm-icon-grid" class="icon-grid"></div>
+                    </div>
+                    <select id="bm-group">
+                        <option value="">No group</option>
+                    </select>
+                    <button type="submit">Add Bookmark</button>
+                </form>
+            </section>
+
+            <section class="settings-section">
+                <h2>All Bookmarks</h2>
+                <div id="bookmarks-table"></div>
+            </section>
+        </div>
+    </div>
+
+    <!-- Edit Bookmark Modal -->
+    <div id="edit-modal" class="modal hidden">
+        <div class="modal-box">
+            <h2>Edit Bookmark</h2>
+            <form id="form-edit-bookmark" class="settings-form">
+                <input type="hidden" id="edit-bm-id">
+                <input type="text" id="edit-bm-name" placeholder="Name" required>
+                <div class="type-toggle">
+                    <label><input type="radio" name="edit-bm-type" value="port" checked> Port</label>
+                    <label><input type="radio" name="edit-bm-type" value="url"> URL</label>
+                </div>
+                <input type="number" id="edit-bm-port" placeholder="Port number" min="1" max="65535">
+                <input type="text" id="edit-bm-url" placeholder="https://example.com" class="hidden">
+                <div class="icon-picker-wrap">
+                    <label>Icon</label>
+                    <input type="text" id="edit-icon-search" placeholder="Search icon…" autocomplete="off">
+                    <input type="hidden" id="edit-bm-icon">
+                    <div id="edit-icon-grid" class="icon-grid"></div>
+                </div>
+                <select id="edit-bm-group">
+                    <option value="">No group</option>
+                </select>
+                <div class="modal-actions">
+                    <button type="submit">Save</button>
+                    <button type="button" id="btn-cancel-edit">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Scan → Add to Dashboard Modal -->
+    <div id="scan-add-modal" class="modal hidden">
+        <div class="modal-box">
+            <h2>Add to Dashboard</h2>
+            <form id="form-scan-add" class="settings-form">
+                <input type="hidden" id="scan-add-port">
+                <input type="text" id="scan-add-name" placeholder="Name" required>
+                <div class="icon-picker-wrap">
+                    <label>Icon</label>
+                    <input type="text" id="scan-add-icon-search" placeholder="Search icon…" autocomplete="off">
+                    <input type="hidden" id="scan-add-icon">
+                    <div id="scan-add-icon-grid" class="icon-grid"></div>
+                </div>
+                <select id="scan-add-group">
+                    <option value="">No group</option>
+                </select>
+                <div class="modal-actions">
+                    <button type="submit">Add</button>
+                    <button type="button" id="btn-cancel-scan-add">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>

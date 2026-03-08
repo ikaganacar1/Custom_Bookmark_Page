@@ -1,0 +1,7 @@
+services:
+  launcher:
+    build: .
+    network_mode: host
+    volumes:
+      - ./data:/app/data
+    restart: always
