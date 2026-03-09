@@ -61,6 +61,10 @@ def serve_css():
 def serve_js():
     return send_from_directory('static', 'script.js')
 
+@app.route('/favicon.png')
+def serve_favicon():
+    return send_from_directory('static', 'favicon.png')
+
 # ── Scanner ───────────────────────────────────────────────────────────────────
 
 def scan_port(port, timeout=0.1):
