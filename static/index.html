@@ -12,6 +12,7 @@
             <button id="nav-dashboard" class="active">Dashboard</button>
             <button id="nav-scan">Scan</button>
             <button id="nav-settings">Settings</button>
+            <button id="nav-suggestions">Suggestions</button>
         </nav>
 
         <!-- ── Dashboard ───────────────────────────────────── -->
@@ -57,6 +58,23 @@
                 </div>
             </div>
             <div id="scan-results" class="pixel-grid"></div>
+        </div>
+
+        <!-- ── Suggestions ─────────────────────────────────── -->
+        <div id="view-suggestions" class="view">
+            <h1>AI Suggestions</h1>
+            <div class="suggestions-controls">
+                <div class="suggestions-status" id="suggestions-status"></div>
+                <button id="btn-refresh-suggestions" class="refresh-btn" title="Refresh suggestions">
+                    <span class="nf">&#xF2EA;</span> Refresh
+                </button>
+            </div>
+            <div id="suggestions-loading" class="hidden">
+                <div class="suggestions-spinner"></div>
+                <p class="suggestions-loading-text">Analyzing your Firefox history...</p>
+            </div>
+            <div id="suggestions-error" class="suggestions-error hidden"></div>
+            <div id="suggestions-list" class="suggestions-grid"></div>
         </div>
 
         <!-- ── Settings ────────────────────────────────────── -->

@@ -1,0 +1,22 @@
+FROM python:3.11-slim
+
+WORKDIR /app
+
+# Install curl for downloading Nerd Fonts (for icon display in UI)
+RUN apt-get update && apt-get install -y curl && rm -rf /var/lib/apt/lists/*
+
+# Install requests library
+RUN pip install requests
+
+# Copy backend script
+COPY suggestions_backend.py .
+
+# Copy static folder (for Nerd Fonts if needed)
+COPY static/ static/
+
+# Create data directory
+RUN mkdir -p /app/data
+
+EXPOSE 7421
+
+CMD ["python", "suggestions_backend.py", "--port", "7421"]

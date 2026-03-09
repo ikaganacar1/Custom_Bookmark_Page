@@ -1,7 +1,28 @@
 services:
+  # Main launcher app (Flask backend)
   launcher:
     build: .
     network_mode: host
     volumes:
       - ./data:/app/data
     restart: always
+
+  # AI Suggestions Backend (Python + Firefox history reader)
+  suggestions-backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.suggestions
+    network_mode: host
+    restart: unless-stopped
+    user: "1000:1000"  # Run as 'ika' user to access Firefox profile
+    volumes:
+      - ./data:/app/data
+      # Mount Firefox profiles for history access
+      - ~/.mozilla:/home/ika/.mozilla:ro
+      - ~/.zen:/home/ika/.zen:ro
+    environment:
+      - HOME=/home/ika
+      - LLM_ENDPOINT=http://localhost:11435/v1/chat/completions
+      - LLM_MODEL=Qwen3-Coder-Next-UD-IQ3_XXS
+    depends_on:
+      - launcher

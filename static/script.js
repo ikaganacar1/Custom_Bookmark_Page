@@ -882,6 +882,218 @@ function addScanCard(port, service, container) {
     container.appendChild(card);
 }
 
+// ── Suggestions Tab Configuration ────────────────────────────────────────────
+const SUGGESTIONS_CONFIG = {
+    backendUrl: 'http://localhost:7421',
+    cacheKey: 'bookmark_suggestions_cache',
+    maxSuggestions: 10
+};
+
+// ── Suggestions Tab Navigation ───────────────────────────────────────────────
+document.getElementById('nav-suggestions').addEventListener('click', () => switchView('suggestions'));
+
+// ── Suggestions Tab Logic ─────────────────────────────────────────────────────
+let suggestionsCache = null;
+let suggestionsLoaded = false;
+
+function getSuggestionsFromCache() {
+    try {
+        const cached = sessionStorage.getItem(SUGGESTIONS_CONFIG.cacheKey);
+        if (cached) {
+            const data = JSON.parse(cached);
+            if (Date.now() - data.timestamp < 3600000) { // 1 hour cache
+                return data.suggestions;
+            }
+        }
+    } catch (e) {
+        console.warn('Cache read failed:', e);
+    }
+    return null;
+}
+
+function setSuggestionsCache(suggestions) {
+    try {
+        sessionStorage.setItem(SUGGESTIONS_CONFIG.cacheKey, JSON.stringify({
+            suggestions: suggestions,
+            timestamp: Date.now()
+        }));
+    } catch (e) {
+        console.warn('Cache write failed:', e);
+    }
+}
+
+async function loadSuggestions(forceRefresh = false) {
+    const loadingDiv = document.getElementById('suggestions-loading');
+    const errorDiv = document.getElementById('suggestions-error');
+    const listDiv = document.getElementById('suggestions-list');
+    const statusDiv = document.getElementById('suggestions-status');
+
+    // Reset UI
+    loadingDiv.classList.remove('hidden');
+    errorDiv.classList.add('hidden');
+    listDiv.innerHTML = '';
+
+    // Check cache first (unless force refresh)
+    if (!forceRefresh) {
+        const cached = getSuggestionsFromCache();
+        if (cached && cached.length > 0) {
+            renderSuggestions(cached);
+            statusDiv.textContent = 'Showing cached suggestions';
+            loadingDiv.classList.add('hidden');
+            return;
+        }
+    }
+
+    try {
+        const response = await fetch(`${SUGGESTIONS_CONFIG.backendUrl}/suggestions`);
+        
+        if (!response.ok) {
+            throw new Error(`Backend returned ${response.status}`);
+        }
+
+        const data = await response.json();
+
+        if (!data.success || !data.suggestions || data.suggestions.length === 0) {
+            throw new Error('No suggestions received');
+        }
+
+        // Cache the results
+        setSuggestionsCache(data.suggestions);
+        renderSuggestions(data.suggestions);
+        statusDiv.textContent = `Loaded ${data.count} suggestions`;
+
+    } catch (err) {
+        console.error('Failed to load suggestions:', err);
+        statusDiv.textContent = '';
+        loadingDiv.classList.add('hidden');
+        errorDiv.textContent = `Could not load suggestions: ${err.message}. Make sure the Python backend is running on ${SUGGESTIONS_CONFIG.backendUrl}`;
+        errorDiv.classList.remove('hidden');
+    }
+}
+
+function renderSuggestions(suggestions) {
+    const listDiv = document.getElementById('suggestions-list');
+    listDiv.innerHTML = '';
+
+    if (!suggestions || suggestions.length === 0) {
+        listDiv.innerHTML = `<div class="empty-state">
+            <div class="empty-pixel">[_]</div>
+            <p>No suggestions available.</p>
+            <p class="empty-hint">Make sure Firefox has browsing history and backend is running.</p>
+        </div>`;
+        return;
+    }
+
+    suggestions.forEach(s => {
+        const card = document.createElement('div');
+        card.className = 'suggestion-card';
+
+        const categoryColor = getCategoryColor(s.category);
+        card.style.borderTopColor = categoryColor;
+
+        // Use a generic icon for suggestions (globe)
+        const iconChar = '\uF0AC'; // globe icon
+
+        card.innerHTML = `
+            <div class="card-icon"><span class="nf">${iconChar}</span></div>
+            <h3>${escHtml(s.title)}</h3>
+            <p class="suggestion-url">${escHtml(s.url)}</p>
+            <p class="suggestion-badge" style="background:${categoryColor};color:#2c3e50">${escHtml(s.category || 'General')}</p>
+            <p class="suggestion-desc">${escHtml(s.description || '')}</p>
+            <div class="suggestion-actions">
+                <button class="open-suggestion-btn" data-url="${escHtml(s.url)}">Open</button>
+                <button class="add-bm-btn" data-title="${escHtml(s.title)}" data-url="${escHtml(s.url)}" data-category="${escHtml(s.category || '')}">Add</button>
+            </div>`;
+
+        // Open button
+        card.querySelector('.open-suggestion-btn').addEventListener('click', () => {
+            window.open(s.url, '_blank');
+        });
+
+        // Add to Dashboard button
+        card.querySelector('.add-bm-btn').addEventListener('click', (e) => {
+            const title = e.target.dataset.title;
+            const url = e.target.dataset.url;
+            const category = e.target.dataset.category;
+            addSuggestionAsBookmark(title, url, category);
+        });
+
+        listDiv.appendChild(card);
+    });
+
+    suggestionsLoaded = true;
+}
+
+function getCategoryColor(category) {
+    const categories = {
+        'Geliştirici': '#27ae60',  // green
+        'Araştırma': '#2980b9',     // blue
+        'Verimlilik': '#f39c12',     // yellow
+        'Eğlence': '#c0392b',       // red
+        'Sosyal': '#9b59b6',        // purple
+        'Haber': '#3498db',         // light blue
+        'Genel': '#95a5a6'          // grey
+    };
+
+    for (const key in categories) {
+        if (category && category.toLowerCase().includes(key.toLowerCase())) {
+            return categories[key];
+        }
+    }
+    return 'var(--yellow)';
+}
+
+async function addSuggestionAsBookmark(title, url, category) {
+    // Get first group or create default
+    const groupsArray = groups.length > 0 ? groups : [];
+    const defaultGroup = groupsArray.length > 0 ? groupsArray[0].id : '';
+
+    // Create bookmark object
+    const bookmark = {
+        name: title,
+        url: url,
+        port: null,
+        icon: 'nf-fa-globe',  // Use globe icon for suggestions
+        group: defaultGroup
+    };
+
+    try {
+        const response = await fetch('/api/bookmarks', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(bookmark)
+        });
+
+        if (!response.ok) {
+            throw new Error('Failed to add bookmark');
+        }
+
+        // Reload data
+        await loadAll();
+
+        // Show confirmation
+        alert(`Added "${title}" to Dashboard!`);
+
+    } catch (err) {
+        console.error('Failed to add bookmark:', err);
+        alert(`Could not add bookmark: ${err.message}`);
+    }
+}
+
+// ── Refresh Button ─────────────────────────────────────────────────────────────
+document.getElementById('btn-refresh-suggestions').addEventListener('click', () => {
+    document.getElementById('suggestions-status').textContent = 'Refreshing...';
+    loadSuggestions(true);
+});
+
+// ── Init Suggestions Tab ───────────────────────────────────────────────────────
+document.getElementById('view-suggestions').addEventListener('click', () => {
+    // Load suggestions when tab is first accessed
+    if (!suggestionsLoaded) {
+        loadSuggestions(false);
+    }
+});
+
 // ── Init ───────────────────────────────────────────────────────────────────────
 setInitialModeBtn();
 loadAll();
