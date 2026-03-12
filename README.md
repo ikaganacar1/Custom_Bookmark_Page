@@ -131,3 +131,6 @@ python app.py
 - **Storage** — `data/favorites.json`
 - **Icons** — [Nerd Fonts Symbols Only](https://github.com/ryanoasis/nerd-fonts)
 - **Deployment** — Docker + Docker Compose (`network_mode: host` for localhost access)
+
+
+https://www.canva.com/design/DAHDd4fUH3o/41tAyLHpLVkFOASPPI7O8g/view?utm_content=DAHDd4fUH3o&utm_campaign=designshare&utm_medium=link2&utm_source=uniquelinks&utlId=h1cb224111c
